@@ -1,1 +1,1 @@
-Portfolio of excerpts from code prepared by jacob-gg for selected StatLab consults.
+Excerpts from code prepared by jacob-gg for selected StatLab consults.
