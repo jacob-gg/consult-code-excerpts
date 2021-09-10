@@ -1,7 +1,7 @@
 ---
-title: "Selected StatLab Consult Code Excerpts"
-author: "Jacob Goldstein-Greenwood"
-date: "9/7/2021"
+title: "Selected StatLab Consultation Code Excerpts"
+author: "Jacob Goldstein-Greenwood ([email](mailto:jacobgg@virginia.edu))"
+date: '`r Sys.Date()`'
 output: html_document
 ---
 
@@ -9,13 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Below are excerpts from code I prepared for a few of the statistical and programming consultations I've received as part of my work for the UVa Library's StatLab. I've removed identifying information from code chunks and comments. Most consultations involve a meeting at which I learn more about the inquirer's question or problem, discuss possible solutions, and walk through any code I've drafted with them.
+This document contains excerpts from code I prepared for a few of the statistical and programming consultations I've provided as part of my work for the UVa Library's StatLab. I've removed identifying information from code chunks and comments. Some consultations are handled solely through email, although most involve a meeting at which I learn more about the inquirer's question or problem, discuss possible solutions, and walk through any code I've drafted with them.
 
 ---
 
 <details><summary>Calculating the entropy of images</summary><br/>
 
-I received a consult request from someone interested in quantifying and comparing the amount of disorder in images of greenspaces. I proposed one approach: Calculating the information entropy of pixel intensities in each image. I prepared a function that read in images, extracts pixel-wise grayscale values, and calculates information entropy from a binned version of those values.
+I received a consultation request from someone interested in quantifying and comparing the amount of disorder in images of greenspaces. I proposed that the inquirer could calculate the information entropy of each image's pixel intensity values. I prepared a function to read in images, extract pixel-wise grayscale values, and calculate information entropy from a binned version of those values.
 
 ```{r, echo = T, eval = F}
 # Relevant packages
@@ -51,89 +51,9 @@ entropy_values
 
 ---
 
-<details><summary>Clustering standard errors in education data</summary><br/>
-
-I received a consult request from someone looking to analyze the effect of an education intervention. Each participant in the data had two to three associated measurements, with a (categorical) intervention value and an outcome measure (an exam score) at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I worked up this example:
-
-```{r, echo = T, eval = F}
-# Clustering standard errors to account for dependant data in a one-way ANOVA
-
-######## Simulate some data
-set.seed(99)
-# Generate participant IDs; some participants have two associated observations; some have three
-participant_id <- rep(1:500, sample(2:3, 500, replace = T))
-num_ps <- length(participant_id)
-# Generate (categorical) intervention value for each participant (designated by letters) and exam scores
-faux_exam_data <- data.frame(participant_id,
-                             timer_method = factor(sample(LETTERS[1:10], num_ps, replace = T)),
-                             score = round(rnorm(length(participant_id), mean = 75, sd = 10), digits = 2))
-# Convert any scores over 100 to 100
-faux_exam_data$score <- ifelse(faux_exam_data$score > 100, 100, faux_exam_data$score)
-# Take a look at the data
-head(faux_exam_data)
-
-######## Unmodified one-way ANOVA
-anova_mod <- lm(score ~ timer_method, data = faux_exam_data)
-# If we give this model to the function `glht()` from the `multcomp` package, we can perform multiple-comparison tests examining the difference between each pair of timer types for significance
-# Note: glht() performs a p-value correction to account for the fact that performing multiple tests can inflate the false-discovery rate
-library(multcomp)
-unmodified_anova_comparisons <- glht(anova_mod, linfct = mcp(timer_method = 'Tukey'))
-summary(unmodified_anova_comparisons)
-
-####### However, we know that the data are *dependent*: Not every observation is independent of each other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
-# Non-independence can lead us to underestimate standard errors
-# We can use clustered standard errors to try and account for the clustered structure of the data
-# The `sandwich` package provides a function for generating a "clustered covariance matrix", vcovCL(), and we can pass that to glht() to get pairwise comparisons between timer types that use clustered standard errors
-library(sandwich)
-clustered_se_comparisons <- glht(anova_mod, linfct = mcp(timer_method = 'Tukey'),
-                                 vcov. = vcovCL(anova_mod, cluster = faux_exam_data$participant_id))
-summary(clustered_se_comparisons)
-```
-
-</details>
-
----
-
-<details><summary>Calculating the Bray-Curtis Dissimilarity Index</summary><br/>
-
-I received an inquiry from someone looking to calculate Bray-Curtis dissimilarity indexes in R. I simulated some relevant data and worked up the following example:
-
-```{r, echo = T, eval = F}
-set.seed(150)
-
-trees <- data.frame(plot = c(rep('highlands', 10), rep('lowlands', 10)),
-                    species = c(c('fir', 'birch', 'oak', letters[1:7]),
-                                c('fir', 'birch', 'oak', letters[20:26])),
-                    count = sample(1:10, 20, replace = T))
-# Shared species at both plots: Fir, birch, oak
-
-##### Bray-Curtis dissimilarity index:
-# 1. Take two times the sum of lesser counts for shared species
-# Higlands:
-#   Fir: 3 [LESSER]
-#   Birch: 3 [GREATER]
-#   Oak: 1 [LESSER]
-# Lowlands:ccc
-#   Fir: 4 [GREATER]
-#   Birch: 2 [LESSER]
-#   Oak: 7 [GREATER]
-lesser_sum <- 2 * (3 + 2 + 1)
-# 2. Divide by sum of total counts at both plots; then subtract from 1 to make higher values means more dissimilar
-plot_counts <- aggregate(trees$count, by = list(trees$plot), sum)
-bc_dissim <- 1 - (lesser_sum / sum(plot_counts$x))
-bc_dissim
-
-# Equation: https://www.statisticshowto.com/bray-curtis-dissimilarity/
-# The fraction part of the equation answers the following question: "Out of the total number of trees across the plots, what proportion of trees have a one-to-one match with a same-species tree at the other site?" (If there are 10 pines in the highlands and 8 pines in the lowlands, we only consider there to be 8*2 = 16 matched pines, not 10 + 8 = 18.)
-```
-
-</details>
-
----
-
 <details><summary>Identifying data mismatches across elements of large lists</summary><br/>
 
-I received a consult request from someone with two large lists of data frames, where each list element contained some number of years worth of data on a particular measure (one list housed data frames containing yearly values on one measure, X; the other list housed data frames containing values on a second measure, Y). The inquirer was looking to identify which matched pairs of list elements contained mismatched years of data (e.g., the i^th^ element of List 1 contained X values for 2000:2015, but the i^th^ element of List 2 only contained Y values 2000:2008 and 2011:2015). When mismatched were identified for a given matched pair of list elements, the inquirer was looking to drop those years from the elements. I proposed the following:
+I received a consultation request from someone looking to clean data contained in two large lists of data frames. Each list element contained a variable number of years of data on a certain measure (one list housed data frames containing yearly values on one measure, X; the other list housed data frames containing values on a different measure, Y). The two lists were the same length. The inquirer was looking to identify which matched pairs of list elements contained *mismatched* years of data (e.g., the i^th^ element of List 1 contained X values for 2000:2015, but the i^th^ element of List 2 only contained Y values 2000:2008 and 2011:2015). When year mismatches were identified for a given pair of list elements, the inquirer was looking to drop those years from the data frames. I proposed the following:
 
 ```{r, echo = T, eval = F}
 library(rlist)
@@ -164,7 +84,7 @@ cat('Loop took', round(fin_clean - start_clean, digits = 2), 'seconds to run')
 
 <details><summary>Calculating and structuring transition matrices for data across time</summary><br/>
 
-I received an inquiry from someone interested in calculating transition matrices for a number of observations that were each measured at five time points on a scale from 0:3. The inquirer had a function in hand for calculating transition matrices---`Markovmatrix2` below---but the function wasn't acting as desired: It was omitting rows and columns of the matrices that were needed for the inquirer's intended analysis. I proposed the following solution:
+I received an inquiry from someone interested in calculating transition matrices for observations that were each measured at five time points on a scale from 0:3. The inquirer had a function in hand for calculating transition matrices for single observations---`Markovmatrix2` below---but the function wasn't acting as desired: It was omitting rows and columns of the matrices that were needed for the inquirer's intended analysis (example provided in the code comments below). I proposed the following solution:
 
 ```{r, echo = T, eval = F}
 # Existing function for generating transition matrices
@@ -175,12 +95,17 @@ Markovmatrix2 <- function(X, l = 1) {
 }
 
 # Problem: Markovmatrix2 by itself won't generate a transition matrix with the same ncol and nrow for each observation
-#   E.g., if an observation only has 0/2 scores (i.e., no score of 1 or 3 at any time point), the output is a 2x2 matrix with 0/2 along the rows and 0/2 along the columns, like:
+#   E.g., if an observation's values are c(0, 2, 2, 2, 0) (i.e., no score of 1 or 3 at any time point), the output is a 2x2 matrix with 0/2 along the rows and 0/2 along the columns, e.g.:
 #       0       2
-#   0   0.00    0.33
-#   2   0.33    0.33
-# Each matrix, however, needs to be 4x4, with 0:3 along the rows and the columns.
-# I wrote the function below that checks which rows and columns, from 0:3, are missing for each observation and adds those in (if there are any)
+#   0   0.00    0.25
+#   2   0.25    0.50
+# Each matrix, however, needs to be 4x4, with 0:3 along the rows and the columns, e.g.:
+#       0       1       2       3       
+#   0   0.00    0.00    0.25    0.00
+#   1   0.00    0.00    0.00    0.00
+#   2   0.25    0.00    0.50    0.00
+#   3   0.00    0.00    0.00    0.00
+# I wrote the function below that checks which rows and columns (if any) are missing for each transition matrix and adds them in as necessary
 
 tran_mat <- function(df) {
   # Cautionary note: tran_mat() is only designed to generate transition matrices for observations with scores in the 0:3 range
@@ -225,6 +150,98 @@ df <- data.frame(t1 = sample(scores, 100, replace = T),
 
 # Run with simulated data
 example_results_list <- tran_mat(df)
+```
+
+</details>
+
+---
+
+<details><summary>Clustering standard errors in education data</summary><br/>
+
+I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a (categorical) intervention value and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:
+
+```{r, echo = T, eval = F}
+# Clustering standard errors to account for dependant data in a one-way ANOVA
+
+######## Simulate some data
+set.seed(99)
+# Generate participant IDs; some participants have two associated observations; some have three
+participant_id <- rep(1:500, sample(2:3, 500, replace = T))
+num_ps <- length(participant_id)
+# Generate (categorical) intervention value for each participant (designated by letters) and exam scores
+faux_exam_data <- data.frame(participant_id,
+                             timer_method = factor(sample(LETTERS[1:10], num_ps, replace = T)),
+                             score = round(rnorm(length(participant_id), mean = 75, sd = 10), digits = 2))
+# Convert any scores over 100 to 100
+faux_exam_data$score <- ifelse(faux_exam_data$score > 100, 100, faux_exam_data$score)
+# Take a look at the data
+head(faux_exam_data)
+
+######## Unmodified one-way ANOVA
+anova_mod <- lm(score ~ timer_method, data = faux_exam_data)
+# If we give this model to the function `glht()` from the `multcomp` package, we can perform multiple-comparison tests examining the difference between each pair of timer types for significance
+# Note: glht() performs a p-value correction to account for the fact that performing multiple tests can inflate the false-discovery rate
+library(multcomp)
+unmodified_anova_comparisons <- glht(anova_mod, linfct = mcp(timer_method = 'Tukey'))
+summary(unmodified_anova_comparisons)
+
+####### However, we know that the data are *dependent*: Not every observation is independent of each other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
+# Non-independence can lead us to underestimate standard errors
+# We can use clustered standard errors to try and account for the clustered structure of the data
+# The `sandwich` package provides a function for generating a "clustered covariance matrix", vcovCL(), and we can pass that to glht() to get pairwise comparisons between timer types that use clustered standard errors
+library(sandwich)
+clustered_se_comparisons <- glht(anova_mod, linfct = mcp(timer_method = 'Tukey'),
+                                 vcov. = vcovCL(anova_mod, cluster = faux_exam_data$participant_id))
+summary(clustered_se_comparisons)
+```
+
+</details>
+
+---
+
+<details><summary>Calculating the Bray-Curtis Dissimilarity Index</summary><br/>
+
+I received an inquiry from someone looking use R to calculate the Bray-Curtis dissimilarity index, which provides a quantitative measure of the dissimilarity in the compositions of two sites/groups.
+
+$$BC_{ij} = 1 - \frac{2C_{ij}}{S_i + S_j}$$
+
+Where:
+
+- $C_{ij}$ is the sum of the lesser counts for species/types that are observed at *both* sites
+- $S_i$ is the total count of observations at site $i$
+- $S_j$ is the total count of observations at site $j$
+
+In effect, the fraction component of the formula reflects the proportion of all observations (from both sites) that have a same-species/same-type "match" at the other site. $BC_{ij}$, then is the proportion of all observations that *do not* have a match at the other site.
+
+I simulated some relevant data and worked up the following example:
+
+```{r, echo = T, eval = F}
+set.seed(150)
+
+trees <- data.frame(plot = c(rep('highlands', 10), rep('lowlands', 10)),
+                    species = c(c('fir', 'birch', 'oak', letters[1:7]),
+                                c('fir', 'birch', 'oak', letters[20:26])),
+                    count = sample(1:10, 20, replace = T))
+# Shared species at both plots: Fir, birch, oak
+
+##### Bray-Curtis dissimilarity index:
+# 1. Take two times the sum of lesser counts for shared species
+# Higlands:
+#   Fir: 3 [LESSER]
+#   Birch: 3 [GREATER]
+#   Oak: 1 [LESSER]
+# Lowlands:ccc
+#   Fir: 4 [GREATER]
+#   Birch: 2 [LESSER]
+#   Oak: 7 [GREATER]
+lesser_sum <- 2 * (3 + 2 + 1)
+# 2. Divide by sum of total counts at both plots; then subtract from 1 to make higher values means more dissimilar
+plot_counts <- aggregate(trees$count, by = list(trees$plot), sum)
+bc_dissim <- 1 - (lesser_sum / sum(plot_counts$x))
+bc_dissim
+
+# Equation: https://www.statisticshowto.com/bray-curtis-dissimilarity/
+# The fraction part of the equation answers the following question: "Out of the total number of trees across the plots, what proportion of trees have a one-to-one match with a same-species tree at the other site?" (If there are 10 pines in the highlands and 8 pines in the lowlands, we only consider there to be 8*2 = 16 matched pines, not 10 + 8 = 18.)
 ```
 
 </details>
