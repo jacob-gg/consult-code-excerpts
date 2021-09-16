@@ -11,7 +11,7 @@
 
 <meta name="author" content="Jacob Goldstein-Greenwood (email)" />
 
-<meta name="date" content="2021-09-10" />
+<meta name="date" content="2021-09-16" />
 
 <title>Selected StatLab Consultation Code Excerpts</title>
 
@@ -167,7 +167,7 @@ pre code {
 
 <h1 class="title toc-ignore">Selected StatLab Consultation Code Excerpts</h1>
 <h4 class="author">Jacob Goldstein-Greenwood (<a href="mailto:jacobgg@virginia.edu">email</a>)</h4>
-<h4 class="date">2021-09-10</h4>
+<h4 class="date">2021-09-16</h4>
 
 </div>
 
@@ -313,15 +313,15 @@ example_results_list &lt;- tran_mat(df)</code></pre>
 Clustering standard errors in education data
 </summary>
 <p><br /></p>
-<p>I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a (categorical) intervention value and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer’s particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:</p>
-<pre class="r"><code># Clustering standard errors to account for dependant data in a one-way ANOVA
+<p>I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a categorical intervention value (a “timer method”) and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer’s particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:</p>
+<pre class="r"><code># Clustering standard errors to account for dependent data in a one-way ANOVA
 
 ######## Simulate some data
 set.seed(99)
 # Generate participant IDs; some participants have two associated observations; some have three
 participant_id &lt;- rep(1:500, sample(2:3, 500, replace = T))
 num_ps &lt;- length(participant_id)
-# Generate (categorical) intervention value for each participant (designated by letters) and exam scores
+# Generate a categorical intervention value (a timer type, designated by a letter) for each observation, as well as an exam score
 faux_exam_data &lt;- data.frame(participant_id,
                              timer_method = factor(sample(LETTERS[1:10], num_ps, replace = T)),
                              score = round(rnorm(length(participant_id), mean = 75, sd = 10), digits = 2))
@@ -338,7 +338,7 @@ library(multcomp)
 unmodified_anova_comparisons &lt;- glht(anova_mod, linfct = mcp(timer_method = &#39;Tukey&#39;))
 summary(unmodified_anova_comparisons)
 
-####### However, we know that the data are *dependent*: Not every observation is independent of each other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
+####### However, we know that the data are *dependent*: Not every observation is independent of every other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
 # Non-independence can lead us to underestimate standard errors
 # We can use clustered standard errors to try and account for the clustered structure of the data
 # The `sandwich` package provides a function for generating a &quot;clustered covariance matrix&quot;, vcovCL(), and we can pass that to glht() to get pairwise comparisons between timer types that use clustered standard errors
@@ -353,7 +353,7 @@ summary(clustered_se_comparisons)</code></pre>
 Calculating the Bray-Curtis Dissimilarity Index
 </summary>
 <p><br /></p>
-<p>I received an inquiry from someone looking use R to calculate the Bray-Curtis dissimilarity index, which provides a quantitative measure of the dissimilarity in the compositions of two sites/groups.</p>
+<p>I received an inquiry from someone looking use R to calculate the Bray-Curtis dissimilarity index, which provides a quantitative measure of the dissimilarity in the compositions of two sites.</p>
 <p><span class="math display">\[BC_{ij} = 1 - \frac{2C_{ij}}{S_i + S_j}\]</span></p>
 <p>Where:</p>
 <ul>
@@ -361,8 +361,8 @@ Calculating the Bray-Curtis Dissimilarity Index
 <li><span class="math inline">\(S_i\)</span> is the total count of observations at site <span class="math inline">\(i\)</span></li>
 <li><span class="math inline">\(S_j\)</span> is the total count of observations at site <span class="math inline">\(j\)</span></li>
 </ul>
-<p>In effect, the fraction component of the formula reflects the proportion of all observations (from both sites) that have a same-species/same-type “match” at the other site. <span class="math inline">\(BC_{ij}\)</span>, then is the proportion of all observations that <em>do not</em> have a match at the other site.</p>
-<p>I simulated some relevant data and worked up the following example:</p>
+<p>In effect, the fraction component of the formula reflects the proportion of observations (from both sites) that have a same-species/same-type “match” at the other site. <span class="math inline">\(BC_{ij}\)</span>, then is the proportion of observations that <em>do not</em> have a match at the other site.</p>
+<p>I simulated some data and worked up the following example:</p>
 <pre class="r"><code>set.seed(150)
 
 trees &lt;- data.frame(plot = c(rep(&#39;highlands&#39;, 10), rep(&#39;lowlands&#39;, 10)),

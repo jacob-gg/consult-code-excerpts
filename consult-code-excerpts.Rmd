@@ -158,17 +158,17 @@ example_results_list <- tran_mat(df)
 
 <details><summary>Clustering standard errors in education data</summary><br/>
 
-I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a (categorical) intervention value and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:
+I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a categorical intervention value (a "timer method") and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:
 
 ```{r, echo = T, eval = F}
-# Clustering standard errors to account for dependant data in a one-way ANOVA
+# Clustering standard errors to account for dependent data in a one-way ANOVA
 
 ######## Simulate some data
 set.seed(99)
 # Generate participant IDs; some participants have two associated observations; some have three
 participant_id <- rep(1:500, sample(2:3, 500, replace = T))
 num_ps <- length(participant_id)
-# Generate (categorical) intervention value for each participant (designated by letters) and exam scores
+# Generate a categorical intervention value (a timer type, designated by a letter) for each observation, as well as an exam score
 faux_exam_data <- data.frame(participant_id,
                              timer_method = factor(sample(LETTERS[1:10], num_ps, replace = T)),
                              score = round(rnorm(length(participant_id), mean = 75, sd = 10), digits = 2))
@@ -185,7 +185,7 @@ library(multcomp)
 unmodified_anova_comparisons <- glht(anova_mod, linfct = mcp(timer_method = 'Tukey'))
 summary(unmodified_anova_comparisons)
 
-####### However, we know that the data are *dependent*: Not every observation is independent of each other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
+####### However, we know that the data are *dependent*: Not every observation is independent of every other, because each participant contributes either 2 or 3 scores to the data (i.e., there are clusters in the data)
 # Non-independence can lead us to underestimate standard errors
 # We can use clustered standard errors to try and account for the clustered structure of the data
 # The `sandwich` package provides a function for generating a "clustered covariance matrix", vcovCL(), and we can pass that to glht() to get pairwise comparisons between timer types that use clustered standard errors
@@ -201,7 +201,7 @@ summary(clustered_se_comparisons)
 
 <details><summary>Calculating the Bray-Curtis Dissimilarity Index</summary><br/>
 
-I received an inquiry from someone looking use R to calculate the Bray-Curtis dissimilarity index, which provides a quantitative measure of the dissimilarity in the compositions of two sites/groups.
+I received an inquiry from someone looking use R to calculate the Bray-Curtis dissimilarity index, which provides a quantitative measure of the dissimilarity in the compositions of two sites.
 
 $$BC_{ij} = 1 - \frac{2C_{ij}}{S_i + S_j}$$
 
@@ -211,9 +211,9 @@ Where:
 - $S_i$ is the total count of observations at site $i$
 - $S_j$ is the total count of observations at site $j$
 
-In effect, the fraction component of the formula reflects the proportion of all observations (from both sites) that have a same-species/same-type "match" at the other site. $BC_{ij}$, then is the proportion of all observations that *do not* have a match at the other site.
+In effect, the fraction component of the formula reflects the proportion of observations (from both sites) that have a same-species/same-type "match" at the other site. $BC_{ij}$, then is the proportion of observations that *do not* have a match at the other site.
 
-I simulated some relevant data and worked up the following example:
+I simulated some data and worked up the following example:
 
 ```{r, echo = T, eval = F}
 set.seed(150)
