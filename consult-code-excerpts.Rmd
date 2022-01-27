@@ -9,45 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This document contains excerpts from code I prepared for a few of the statistical and programming consultations I've provided as part of my work for the UVa Library's StatLab. I've removed identifying information from code chunks and comments. Some consultations are handled solely through email, although most involve a meeting at which I learn more about the inquirer's question or problem, discuss possible solutions, and walk through any code I've drafted with them.
-
----
-
-<details><summary>Calculating the entropy of images</summary><br/>
-
-I received a consultation request from someone interested in quantifying and comparing the amount of disorder in images of greenspaces. I proposed that the inquirer could calculate the information entropy of each image's pixel intensity values. I prepared a function to read in images, extract pixel-wise grayscale values, and calculate information entropy from a binned version of those values.
-
-```{r, echo = T, eval = F}
-# Relevant packages
-library(CulturalAnalytics)
-library(jpeg)
-
-# A function to (a) read in an image as an array of values, (b) convert the array to grayscale, (c) generate a histogram of grayscale (i.e., intensity) values, and (d) produce the entropy of those values (more details on the specifics of this function are at the bottom of this file):
-img_entropy <- function(your_image) {
-  img <- jpeg::readJPEG(your_image)
-  img_intensity <- CulturalAnalytics::imageToIntensity(img, method = 'mean')
-  img_intensity_histogram <- hist(img_intensity, breaks = 0:255/255)
-  CulturalAnalytics::imageEntropy(img_intensity_histogram)
-}
-
-# Running the function on a pair of sample images to demonstrate:
-img_entropy('low_comp.jpg')
-img_entropy('high_comp.jpg')
-
-# Once you have a full set of masked images, you can get entropy estimates for each of them all at once by running the following, which iterates the function above through a directory of images:
-entropy_values <- sapply(dir('/Users/username/Desktop/image_folder'), img_entropy)
-entropy_values
-
-# Additional info on the img_entropy function I've written above:
-# readJPEG() reads in an image as an array of values
-# imageToIntensity converts that array to grayscale by taking the average of the RGB channels (use View(imageToIntensity) to see the source code in detail); note that taking the average seems like a fine option, but there are alternatives, and it's possible that a luminosity-preserving method might be preferred, see here: https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
-# hist() the generates a histogram from those intensity values; I've currently set the histogram to have 256 breaks ranging from 0 to 1 (i.e., breaks = 0:255/255; my understanding is that grayscale data is commonly treated as 256 shades from 0 to 1)
-# imageEntropy() calculates Shannon entropy from that histogram per the following formula (use View(imageEntropy) to see the source code):
-#     -sum(p(x_i) * log2(p(x_i)))
-#     Where p(x_i) is the proportion (probability) of cases falling in a given intensity bin. imageEntropy() uses log base-2, and entropy is therefore in bits
-```
-
-</details>
+This document contains excerpts from code I prepared for a few of the statistical and programming consultations I've provided as part of my work for the UVA Library's StatLab. I've removed identifying information from code chunks and comments. Some consultations are handled solely through email, although most involve a meeting at which I learn more about the inquirer's question or problem, discuss possible solutions, and walk through any code I've drafted with them.
 
 ---
 
@@ -84,7 +46,7 @@ cat('Loop took', round(fin_clean - start_clean, digits = 2), 'seconds to run')
 
 <details><summary>Calculating and structuring transition matrices for data across time</summary><br/>
 
-I received an inquiry from someone interested in calculating transition matrices for observations that were each measured at five time points on a scale from 0:3. The inquirer had a function in hand for calculating transition matrices for single observations---`Markovmatrix2` below---but the function wasn't acting as desired: It was omitting rows and columns of the matrices that were needed for the inquirer's intended analysis (example provided in the code comments below). I proposed the following solution:
+I received an inquiry from someone interested in calculating transition matrices for observations that were each measured at five time points on a scale from 0:3. The inquirer had a function in hand for calculating transition matrices for single observations---`Markovmatrix2()` below---but the function wasn't acting as desired: It was omitting rows and columns of the matrices that were needed for the inquirer's intended analysis (example provided in the code comments below). I proposed the following solution:
 
 ```{r, echo = T, eval = F}
 # Existing function for generating transition matrices
@@ -156,9 +118,47 @@ example_results_list <- tran_mat(df)
 
 ---
 
+<details><summary>Calculating the entropy of images</summary><br/>
+
+I received a consultation request from someone interested in quantifying and comparing the amount of disorder in images of greenspaces. I proposed that the inquirer could calculate the information entropy of each image's pixel intensity values. I prepared a function to read in images, extract pixel-wise grayscale values, and calculate information entropy from a binned version of those values.
+
+```{r, echo = T, eval = F}
+# Relevant packages
+library(CulturalAnalytics)
+library(jpeg)
+
+# A function to (a) read in an image as an array of values, (b) convert the array to grayscale, (c) generate a histogram of grayscale (i.e., intensity) values, and (d) produce the entropy of those values (more details on the specifics of this function are at the bottom of this code):
+img_entropy <- function(your_image) {
+  img <- jpeg::readJPEG(your_image)
+  img_intensity <- CulturalAnalytics::imageToIntensity(img, method = 'mean')
+  img_intensity_histogram <- hist(img_intensity, breaks = 0:255/255)
+  CulturalAnalytics::imageEntropy(img_intensity_histogram)
+}
+
+# Function can then be applied to images like so:
+img_entropy('low_complexity_greenspace.jpg')
+img_entropy('high_complexity_greenspace.jpg')
+
+# Once you have a full set of images, you can get entropy estimates for each of them all at once by running the following, which iterates the function above through a directory of images:
+entropy_values <- sapply(dir('.../image_folder'), img_entropy)
+entropy_values
+
+# Additional info on the img_entropy function I've written above:
+# readJPEG() reads in an image as an array of values
+# imageToIntensity() converts that array to grayscale by taking the average of the RGB channels (use View(imageToIntensity) to see the source code in detail); note that taking the average seems like a fine option, but there are alternatives, and it's possible that a luminosity-preserving method might be preferred, see here: https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
+# hist() the generates a histogram from those intensity values; I've currently set the histogram to have 256 breaks ranging from 0 to 1 (i.e., breaks = 0:255/255; my understanding is that grayscale data is commonly treated as 256 shades from 0 to 1)
+# imageEntropy() calculates Shannon entropy from that histogram per the following formula (use View(imageEntropy) to see the source code):
+#     -sum(p(x_i) * log2(p(x_i)))
+#     Where p(x_i) is the proportion (probability) of cases falling in a given intensity bin. imageEntropy() uses log base-2, and entropy is therefore in bits
+```
+
+</details>
+
+---
+
 <details><summary>Clustering standard errors in education data</summary><br/>
 
-I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a categorical intervention value (a "timer method") and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset and worked up this example:
+I received a consultation request from someone looking to analyze the effect of an education intervention in repeated-measures data. Each participant had two or three associated measurements, with a categorical intervention value (a "timer method") and an outcome measure (an exam score) listed at each time point. I generally incline toward using mixed-effects models to handle data of this sort, but in this case, to accommodate the inquirer's particular level of comfort with some statistical methods and not others, I proposed accounting for the dependent structure of the data using clustered standard errors. I simulated a dataset similar to the inquirer's and worked up this example:
 
 ```{r, echo = T, eval = F}
 # Clustering standard errors to account for dependent data in a one-way ANOVA
